@@ -10,7 +10,7 @@ import { logger } from "../utils/logger.js";
 import { roleValues } from "../types/role.type.js";
 
 const resolveUserSchema = z.object({
-  clerkToken: z.string().optional(),
+  clerkId: z.string().optional(),
 });
 
 const getServiceAndDb = () => {
@@ -38,34 +38,36 @@ export const resolveUser: RequestHandler = async (req, res, next) => {
     const { service } = getServiceAndDb();
     
     // Get Clerk token from Authorization header or request body
-    let clerkToken: string;
-    const authHeader = req.headers.authorization;
+    let clerkId = req.headers["user-id"] as string;
+    let email = req.headers["email"] as string;
+
     
-    if (authHeader) {
-      clerkToken = ClerkService.extractToken(authHeader);
-    } else {
-      const body = resolveUserSchema.parse(req.body);
-      if (!body.clerkToken) {
-        throw new AppError(
-          "Clerk token must be provided via Authorization header or in request body as clerkToken",
+    if (!clerkId) {
+      throw new AppError(
+          "Clerk ID must be provided via Authorization header or in request body as clerkId",
           400,
         );
-      }
-      clerkToken = body.clerkToken;
+    }
+
+    if (!email) {
+      throw new AppError(
+          "Email must be provided via header or in request body as email",
+          400,
+        );
     }
 
     // Verify Clerk JWT
-    const clerkPayload = await ClerkService.verifyToken(clerkToken);
-    const clerkUserId = clerkPayload.sub;
-    const email = clerkPayload.email;
+    // const clerkPayload = await ClerkService.verifyToken(clerkId);
+    // const clerkUserId = clerkPayload.sub;
+    // const email = clerkPayload.email;
 
-    logger.info("Resolving user", { clerkUserId });
+    // logger.info("Resolving user", { clerkUserId });
 
     // Resolve or provision user
-    const user = await service.resolveUser(clerkUserId, email);
+    const user = await service.resolveUser(clerkId, email);
 
     if (!user) {
-      logger.warn("User not found after resolution attempt", { clerkUserId });
+      logger.warn("User not found after resolution attempt", { clerkId, email });
       throw new AppError("Failed to resolve user", 500);
     }
 

@@ -12,7 +12,7 @@ export interface InternalTokenPayload extends JwtPayload {
   email: string;
   iss: string;
   iat: number;
-  exp: number;
+  // exp: number;
 }
 
 export interface TokenResponse {
@@ -52,7 +52,7 @@ export class TokenService {
       email: user.email,
       iss: env.SERVICE_NAME,
       iat: now,
-      exp: expiresAt,
+      // exp: expiresAt,
     };
 
     const token = jwt.sign(payload, env.JWT_SECRET, {
