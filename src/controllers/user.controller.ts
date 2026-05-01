@@ -1,0 +1,86 @@
+import type { RequestHandler } from "express";
+import { AppError } from "../error.js";
+import { updateMyProfileSchema, upsertUserSchema } from "../models/user.model.js";
+import { UserRepository } from "../repositories/user.repository.js";
+import { UserService } from "../services/user.service.js";
+import { getDb } from "../config/db.js";
+
+const getService = (): UserService => {
+  const db = getDb();
+  if (!db) {
+    throw new AppError("Database not configured. Set DATABASE_URL and restart service.", 503);
+  }
+
+  return new UserService(new UserRepository(db));
+};
+
+export const getMe: RequestHandler = async (_req, res, next) => {
+  try {
+    const authUserId = res.locals.authUserId;
+    if (!authUserId) throw new AppError("Unauthorized", 401);
+
+    const service = getService();
+    const user = await service.findByClerkUserId(authUserId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found in domain DB",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateMe: RequestHandler = async (req, res, next) => {
+  try {
+    const authUserId = res.locals.authUserId;
+    if (!authUserId) throw new AppError("Unauthorized", 401);
+
+    const payload = updateMyProfileSchema.parse(req.body);
+    const service = getService();
+    const updated = await service.updateMyProfile(authUserId, payload);
+
+    return res.status(200).json({
+      success: true,
+      data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const upsertFromClerk: RequestHandler = async (req, res, next) => {
+  try {
+    const payload = upsertUserSchema.parse(req.body);
+    const service = getService();
+    const user = await service.upsertUser(payload);
+
+    return res.status(200).json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const listUsers: RequestHandler = async (_req, res, next) => {
+  try {
+    const service = getService();
+    const users = await service.listAllUsers();
+
+    return res.status(200).json({
+      success: true,
+      data: users,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
