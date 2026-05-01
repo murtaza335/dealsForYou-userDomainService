@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
   first_name TEXT,
   last_name TEXT,
   role user_role NOT NULL DEFAULT 'END_USER',
+  tenant_id UUID,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   brand_id UUID,
   metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -23,6 +24,8 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_brand_id ON users(brand_id);
+CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_users_clerk_user_id ON users(clerk_user_id);
 
 CREATE TABLE IF NOT EXISTS consumer_profiles (
   user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -45,3 +48,4 @@ CREATE TABLE IF NOT EXISTS app_admin_profiles (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+

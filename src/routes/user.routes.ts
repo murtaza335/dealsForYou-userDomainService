@@ -5,13 +5,8 @@ import { getMe, listUsers, updateMe, upsertFromClerk } from "../controllers/user
 
 export const userRouter = Router();
 
-userRouter.get("/me", requireAuth, getMe);
-userRouter.patch("/me", requireAuth, updateMe);
-userRouter.post("/upsert-from-clerk", requireAuth, upsertFromClerk);
-
-userRouter.get(
-  "/admin/users",
-  requireAuth,
-  requireRole(USER_ROLES.APP_ADMIN),
-  listUsers,
-);
+// the api gateway is sending the clerk user id 
+userRouter.get("/me", getMe);
+userRouter.patch("/me", updateMe);
+userRouter.post("/upsert-from-clerk", upsertFromClerk);
+userRouter.get("/admin/users", requireAuth, requireRole(USER_ROLES.APP_ADMIN), listUsers);

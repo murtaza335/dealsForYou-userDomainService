@@ -7,6 +7,7 @@ export interface UserEntity {
   firstName: string | null;
   lastName: string | null;
   role: UserRole;
+  tenantId: string | null;
   isActive: boolean;
   brandId: string | null;
   metadata: Record<string, unknown>;
@@ -20,6 +21,7 @@ export interface UpsertUserPayload {
   firstName?: string | null;
   lastName?: string | null;
   role?: UserRole;
+  tenantId?: string | null;
   brandId?: string | null;
   metadata?: Record<string, unknown>;
 }
@@ -29,3 +31,8 @@ export interface UpdateMyProfilePayload {
   lastName?: string | null;
   metadata?: Record<string, unknown>;
 }
+
+export interface UpdateUserRolePayload {
+  role: UserRole;
+}
+

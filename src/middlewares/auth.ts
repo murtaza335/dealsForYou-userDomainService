@@ -2,6 +2,7 @@ import { getAuth } from "@clerk/express";
 import type { RequestHandler } from "express";
 import { AppError } from "../error.js";
 import { USER_ROLES, type UserRole } from "../types/role.type.js";
+import { logger } from "../utils/logger.js";
 
 type AuthLocals = {
   authUserId?: string;
@@ -17,8 +18,19 @@ const claimToRole = (claim: unknown): UserRole => {
 
 export const requireAuth: RequestHandler = (req, res, next) => {
   const auth = getAuth(req);
+  console.log(auth)
+
+  logger.debug("Authenticating request", {
+    path: req.path,
+    method: req.method,
+    hasUserId: Boolean(auth.userId),
+  });
 
   if (!auth.userId) {
+    logger.warn("Unauthorized request: missing Clerk userId", {
+      path: req.path,
+      method: req.method,
+    });
     return next(new AppError("Unauthorized", 401));
   }
 
@@ -29,6 +41,13 @@ export const requireAuth: RequestHandler = (req, res, next) => {
   const locals = res.locals as AuthLocals;
   locals.authUserId = auth.userId;
   locals.role = claimToRole(roleClaim);
+
+  logger.debug("Authenticated request", {
+    authUserId: auth.userId,
+    role: locals.role,
+    path: req.path,
+    method: req.method,
+  });
   next();
 };
 

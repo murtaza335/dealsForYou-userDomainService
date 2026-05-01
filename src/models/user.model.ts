@@ -7,6 +7,7 @@ export const upsertUserSchema = z.object({
   firstName: z.string().nullable().optional(),
   lastName: z.string().nullable().optional(),
   role: z.enum(roleValues).optional(),
+  tenantId: z.string().uuid().nullable().optional(),
   brandId: z.string().uuid().nullable().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
@@ -16,3 +17,8 @@ export const updateMyProfileSchema = z.object({
   lastName: z.string().nullable().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
+
+export const updateUserRoleSchema = z.object({
+  role: z.enum(roleValues),
+});
+

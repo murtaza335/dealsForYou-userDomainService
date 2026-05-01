@@ -3,6 +3,7 @@ import express, { type Application } from "express";
 import helmet from "helmet";
 import { clerkMiddleware } from "@clerk/express";
 import { userRouter } from "./routes/user.routes.js";
+import { internalRouter } from "./routes/internal.routes.js";
 import { notFoundHandler } from "./middlewares/notFoundHandler.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
@@ -21,7 +22,11 @@ app.get("/health", (_req, res) => {
   });
 });
 
+// Public API routes
 app.use("/api/users", userRouter);
+
+// Internal API routes (for API gateway and inter-service communication)
+app.use("/internal", internalRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

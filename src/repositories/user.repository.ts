@@ -1,95 +1,104 @@
-import type { Pool } from "pg";
-import type { UpdateMyProfilePayload, UpsertUserPayload, UserEntity } from "../types/user.type.js";
+import type { PrismaClient } from "../generated/prisma/client.js";
+import { Prisma } from "../generated/prisma/client.js";
+import type { UpdateMyProfilePayload, UpsertUserPayload, UserEntity, UpdateUserRolePayload } from "../types/user.type.js";
+import type { User } from "../generated/prisma/client.js";
 
-const mapRow = (row: Record<string, unknown>): UserEntity => {
+const mapUser = (user: User): UserEntity => {
   return {
-    id: String(row.id),
-    clerkUserId: String(row.clerk_user_id),
-    email: String(row.email),
-    firstName: (row.first_name as string | null) ?? null,
-    lastName: (row.last_name as string | null) ?? null,
-    role: String(row.role) as UserEntity["role"],
-    isActive: Boolean(row.is_active),
-    brandId: (row.brand_id as string | null) ?? null,
-    metadata: (row.metadata as Record<string, unknown>) ?? {},
-    createdAt: new Date(String(row.created_at)),
-    updatedAt: new Date(String(row.updated_at)),
+    id: user.id,
+    clerkUserId: user.clerkUserId,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+    tenantId: user.tenantId,
+    isActive: user.isActive,
+    brandId: user.brandId,
+    metadata: user.metadata as Record<string, unknown>,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
   };
 };
 
 export class UserRepository {
-  constructor(private readonly db: Pool) {}
+  constructor(private readonly prisma: PrismaClient) {}
 
   async findByClerkUserId(clerkUserId: string): Promise<UserEntity | null> {
-    const result = await this.db.query(
-      `SELECT *
-       FROM users
-       WHERE clerk_user_id = $1
-       LIMIT 1`,
-      [clerkUserId],
-    );
+    const user = await this.prisma.user.findUnique({
+      where: { clerkUserId },
+    });
 
-    if (result.rows.length === 0) return null;
-    return mapRow(result.rows[0]);
+    if (!user) return null;
+    return mapUser(user);
+  }
+
+  async findById(id: string): Promise<UserEntity | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!user) return null;
+    return mapUser(user);
   }
 
   async listAll(): Promise<UserEntity[]> {
-    const result = await this.db.query(
-      `SELECT *
-       FROM users
-       ORDER BY created_at DESC`,
-    );
+    const users = await this.prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+    });
 
-    return result.rows.map(mapRow);
+    return users.map(mapUser);
   }
 
   async upsertUser(payload: UpsertUserPayload): Promise<UserEntity> {
-    const result = await this.db.query(
-      `INSERT INTO users (
-          clerk_user_id,
-          email,
-          first_name,
-          last_name,
-          role,
-          brand_id,
-          metadata
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (clerk_user_id) DO UPDATE SET
-          email = EXCLUDED.email,
-          first_name = EXCLUDED.first_name,
-          last_name = EXCLUDED.last_name,
-          role = EXCLUDED.role,
-          brand_id = EXCLUDED.brand_id,
-          metadata = EXCLUDED.metadata,
-          updated_at = NOW()
-       RETURNING *`,
-      [
-        payload.clerkUserId,
-        payload.email,
-        payload.firstName ?? null,
-        payload.lastName ?? null,
-        payload.role ?? "END_USER",
-        payload.brandId ?? null,
-        payload.metadata ?? {},
-      ],
-    );
+    const role = payload.role ?? "END_USER";
+    const user = await this.prisma.user.upsert({
+      where: { clerkUserId: payload.clerkUserId },
+      update: {
+        email: payload.email,
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        role,
+        tenantId: payload.tenantId,
+        brandId: payload.brandId,
+        metadata: (payload.metadata ?? {}) as Prisma.InputJsonValue,
+      },
+      create: {
+        clerkUserId: payload.clerkUserId,
+        email: payload.email,
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        role,
+        tenantId: payload.tenantId,
+        brandId: payload.brandId,
+        metadata: (payload.metadata ?? {}) as Prisma.InputJsonValue,
+      },
+    });
 
-    return mapRow(result.rows[0]);
+    return mapUser(user);
   }
 
   async updateMyProfile(clerkUserId: string, payload: UpdateMyProfilePayload): Promise<UserEntity | null> {
-    const result = await this.db.query(
-      `UPDATE users
-       SET first_name = COALESCE($2, first_name),
-           last_name = COALESCE($3, last_name),
-           metadata = COALESCE($4, metadata),
-           updated_at = NOW()
-       WHERE clerk_user_id = $1
-       RETURNING *`,
-      [clerkUserId, payload.firstName ?? null, payload.lastName ?? null, payload.metadata ?? null],
-    );
+    const user = await this.prisma.user.update({
+      where: { clerkUserId },
+      data: {
+        firstName: payload.firstName ?? undefined,
+        lastName: payload.lastName ?? undefined,
+        metadata: payload.metadata ? (payload.metadata as Prisma.InputJsonValue) : undefined,
+      },
+    }).catch(() => null);
 
-    if (result.rows.length === 0) return null;
-    return mapRow(result.rows[0]);
+    if (!user) return null;
+    return mapUser(user);
+  }
+
+  async updateUserRole(userId: string, payload: UpdateUserRolePayload): Promise<UserEntity | null> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { role: payload.role },
+    }).catch(() => null);
+
+    if (!user) return null;
+    return mapUser(user);
   }
 }
+

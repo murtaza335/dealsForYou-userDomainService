@@ -1,29 +1,22 @@
-import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../generated/prisma/client.js";
 import { env } from "./env.js";
 
-let db: Pool | null = null;
+const adapter = new PrismaPg({ connectionString: env.DATABASE_URL });
+
+export const prisma = new PrismaClient({ adapter });
 
 export function initializeDb(): void {
-  if (!env.DATABASE_URL) {
+  if (!process.env.DATABASE_URL) {
     console.warn("DATABASE_URL is not set. Database-backed routes will be unavailable.");
     return;
   }
-
-  db = new Pool({ connectionString: env.DATABASE_URL });
-
-  db.on("error", (error) => {
-    console.error("Unexpected PostgreSQL pool error:", error);
-  });
 }
 
-export function getDb(): Pool | null {
-  return db;
+export function getDb() {
+  return prisma;
 }
 
 export async function closeDb(): Promise<void> {
-  if (!db) return;
-
-  const pool = db;
-  db = null;
-  await pool.end();
+  await prisma.$disconnect();
 }
