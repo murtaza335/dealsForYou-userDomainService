@@ -24,6 +24,7 @@ export interface UpsertUserPayload {
   tenantId?: string | null;
   brandId?: string | null;
   metadata?: Record<string, unknown>;
+  isActive?: boolean;
 }
 
 export interface UpdateMyProfilePayload {

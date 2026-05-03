@@ -1,0 +1,5 @@
+npx prisma generate
+npx prisma migrate deploy
+
+after migration verify with:
+npx prisma studio
