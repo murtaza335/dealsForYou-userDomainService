@@ -40,6 +40,12 @@ export class TokenService {
       throw new AppError("JWT_SECRET not configured", 500);
     }
 
+    logger.debug("Generating internal token", {
+      userId: user.id,
+      clerkUserId: user.clerkUserId,
+      role: user.role,
+    });
+
     const now = Math.floor(Date.now() / 1000);
     const expirySeconds = env.TOKEN_EXPIRY_MINUTES * 60;
     const expiresAt = now + expirySeconds;
@@ -135,6 +141,8 @@ export class TokenService {
       logger.warn("Invalid Authorization header format");
       throw new AppError("Invalid Authorization header format", 401);
     }
+
+    logger.debug("Authorization bearer token extracted");
 
     return parts[1];
   }

@@ -19,17 +19,36 @@ const shouldLog = (level: LogLevel): boolean => {
   return LOG_LEVEL_PRIORITY[level] >= LOG_LEVEL_PRIORITY[minLevel];
 };
 
+const serializeData = (data: unknown): string => {
+  if (data instanceof Error) {
+    return JSON.stringify(
+      {
+        name: data.name,
+        message: data.message,
+        stack: data.stack,
+      },
+      null,
+      2,
+    );
+  }
+
+  if (typeof data === "string") {
+    return data;
+  }
+
+  try {
+    return JSON.stringify(data, null, 2);
+  } catch {
+    return String(data);
+  }
+};
+
 const formatMessage = (level: LogLevel, message: string, data?: unknown): string => {
   const timestamp = new Date().toISOString();
   const prefix = `[${timestamp}] ${level} - ${message}`;
 
   if (data) {
-    try {
-      const dataStr = typeof data === "string" ? data : JSON.stringify(data, null, 2);
-      return `${prefix}\n${dataStr}`;
-    } catch {
-      return `${prefix}\n${String(data)}`;
-    }
+    return `${prefix}\n${serializeData(data)}`;
   }
 
   return prefix;
@@ -56,8 +75,7 @@ export const logger = {
 
   error: (message: string, error?: Error | unknown) => {
     if (shouldLog(LogLevel.ERROR)) {
-      const errorData = error instanceof Error ? error.message : String(error);
-      console.error(formatMessage(LogLevel.ERROR, message, errorData));
+      console.error(formatMessage(LogLevel.ERROR, message, error));
     }
   },
 };

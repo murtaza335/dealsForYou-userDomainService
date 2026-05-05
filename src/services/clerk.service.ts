@@ -36,6 +36,8 @@ export class ClerkService {
    */
   static async verifyToken(token: string): Promise<ClerkPayload> {
     try {
+      logger.debug("Verifying Clerk token");
+
       // Decode header to get kid
       const decoded = jwt.decode(token, { complete: true });
 
@@ -56,6 +58,8 @@ export class ClerkService {
       const client = getJwksClient();
       const key = await client.getSigningKey(kid);
       const signingKey = key.getPublicKey();
+
+      logger.debug("Retrieved Clerk signing key", { kid });
 
       // Verify the token
       const verified = jwt.verify(token, signingKey, {
@@ -105,6 +109,8 @@ export class ClerkService {
       logger.warn("Invalid Authorization header format");
       throw new AppError("Invalid Authorization header format", 401);
     }
+
+    logger.debug("Authorization bearer token extracted for Clerk verification");
 
     return parts[1];
   }

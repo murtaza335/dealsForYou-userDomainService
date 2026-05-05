@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 import { USER_ROLES } from "../types/role.type.js";
+import { logger } from "../utils/logger.js";
 import {
   getMe,
   deleteAdminUser,
@@ -15,6 +16,8 @@ import {
 
 export const userRouter = Router();
 
+logger.debug("Registering user routes");
+
 // The API gateway forwards the Clerk user id in the user-id header for these routes.
 userRouter.get("/me", getMe);
 userRouter.patch("/me", updateMe);
@@ -27,13 +30,22 @@ const requireGatewayInternal: import("express").RequestHandler = (req, res, next
   const provided = req.headers["x-api-gateway-secret"];
 
   if (expected && provided !== expected) {
+    logger.warn("Unauthorized internal gateway request", {
+      path: req.originalUrl,
+      method: req.method,
+    });
     return res.status(401).json({ success: false, message: "Unauthorized internal request." });
   }
 
   if (!expected && process.env.NODE_ENV === "production") {
+    logger.error("API gateway internal secret is missing in production");
     return res.status(503).json({ success: false, message: "Internal gateway secret is not configured." });
   }
 
+  logger.debug("Internal gateway request authorized", {
+    path: req.originalUrl,
+    method: req.method,
+  });
   next();
 };
 

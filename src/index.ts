@@ -1,20 +1,26 @@
 import { closeDb, initializeDb } from "./config/db.js";
 import { startServer } from "./server.js";
+import { logger } from "./utils/logger.js";
 
 async function bootstrap(): Promise<void> {
+  logger.info("Bootstrapping user domain service", {
+    service: "user-domain-service",
+  });
+
   await initializeDb();
   const server = startServer();
 
   const shutdown = (signal: string) => {
-    console.log(`${signal} received. Shutting down user domain service...`);
+    logger.info("Shutdown signal received", { signal });
 
     server.close(async () => {
       try {
+        logger.info("HTTP server closed, disconnecting database");
         await closeDb();
-        console.log("Server and DB connections closed.");
+        logger.info("User domain service shutdown complete");
         process.exit(0);
       } catch (error) {
-        console.error("Error during shutdown:", error);
+        logger.error("Error during shutdown", error);
         process.exit(1);
       }
     });
@@ -25,6 +31,6 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((error) => {
-  console.error("Failed to bootstrap user domain service:", error);
+  logger.error("Failed to bootstrap user domain service", error);
   process.exit(1);
 });

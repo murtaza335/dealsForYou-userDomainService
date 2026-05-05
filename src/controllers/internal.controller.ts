@@ -35,6 +35,11 @@ const getServiceAndDb = () => {
  */
 export const resolveUser: RequestHandler = async (req, res, next) => {
   try {
+    logger.debug("Internal resolve-user request received", {
+      hasUserIdHeader: Boolean(req.headers["user-id"]),
+      hasEmailHeader: Boolean(req.headers["email"]),
+    });
+
     const { service } = getServiceAndDb();
     
     // Get Clerk token from Authorization header or request body
@@ -43,6 +48,7 @@ export const resolveUser: RequestHandler = async (req, res, next) => {
 
     
     if (!clerkId) {
+      logger.warn("Resolve-user request missing Clerk ID");
       throw new AppError(
           "Clerk ID must be provided via Authorization header or in request body as clerkId",
           400,
@@ -50,6 +56,7 @@ export const resolveUser: RequestHandler = async (req, res, next) => {
     }
 
     if (!email) {
+      logger.warn("Resolve-user request missing email", { clerkId });
       throw new AppError(
           "Email must be provided via header or in request body as email",
           400,
@@ -80,6 +87,11 @@ export const resolveUser: RequestHandler = async (req, res, next) => {
     // Generate internal token
     const tokenResponse = TokenService.generateToken(user);
 
+    logger.info("Internal user resolved successfully", {
+      userId: user.id,
+      clerkUserId: user.clerkUserId,
+    });
+
     return res.status(200).json({
       success: true,
       data: tokenResponse,
@@ -100,10 +112,15 @@ export const resolveUser: RequestHandler = async (req, res, next) => {
  */
 export const getUserById: RequestHandler = async (req, res, next) => {
   try {
+    logger.debug("Internal get-user-by-id request received", {
+      userId: req.params.userId,
+    });
+
     const { service } = getServiceAndDb();
     const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
 
     if (!userId) {
+      logger.warn("Get-user-by-id request missing userId");
       throw new AppError("User ID is required", 400);
     }
 
@@ -136,9 +153,12 @@ export const getUserById: RequestHandler = async (req, res, next) => {
  */
 export const verifyToken: RequestHandler = async (req, res, next) => {
   try {
+    logger.debug("Internal token verification request received");
+
     const authHeader = req.headers.authorization;
     
     if (!authHeader) {
+      logger.warn("Token verification request missing Authorization header");
       throw new AppError("Missing Authorization header", 400);
     }
 
@@ -166,10 +186,15 @@ export const verifyToken: RequestHandler = async (req, res, next) => {
  */
 export const updateUserRole: RequestHandler = async (req, res, next) => {
   try {
+    logger.debug("Internal update-user-role request received", {
+      userId: req.params.userId,
+    });
+
     const { service } = getServiceAndDb();
     const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
 
     if (!userId) {
+      logger.warn("Update-user-role request missing userId");
       throw new AppError("User ID is required", 400);
     }
 

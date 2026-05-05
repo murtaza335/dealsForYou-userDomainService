@@ -3,6 +3,7 @@ import { Prisma } from "../generated/prisma/client.js";
 import type { UpdateMyProfilePayload, UpsertUserPayload, UserEntity, UpdateUserRolePayload } from "../types/user.type.js";
 import { USER_ROLES, type UserRole } from "../types/role.type.js";
 import type { User } from "../generated/prisma/client.js";
+import { logger } from "../utils/logger.js";
 
 const mapUser = (user: User): UserEntity => {
   return {
@@ -26,47 +27,74 @@ export class UserRepository {
 
   async findByClerkUserId(clerkUserId: string): Promise<UserEntity | null> {
     const id = clerkUserId.trim();
-    if (!id) return null;
+    if (!id) {
+      logger.debug("Repository findByClerkUserId skipped because clerkUserId was empty");
+      return null;
+    }
+
+    logger.debug("Repository finding user by Clerk user ID", { clerkUserId: id });
 
     const user = await this.prisma.user.findUnique({
       where: { clerkUserId: id },
     });
 
-    if (!user) return null;
+    if (!user) {
+      logger.debug("Repository did not find user by Clerk user ID", { clerkUserId: id });
+      return null;
+    }
+
+    logger.debug("Repository found user by Clerk user ID", { clerkUserId: id, userId: user.id });
     return mapUser(user);
   }
 
   async findById(id: string): Promise<UserEntity | null> {
+    logger.debug("Repository finding user by ID", { userId: id });
     const user = await this.prisma.user.findUnique({
       where: { id },
     });
 
-    if (!user) return null;
+    if (!user) {
+      logger.debug("Repository did not find user by ID", { userId: id });
+      return null;
+    }
+
+    logger.debug("Repository found user by ID", { userId: id });
     return mapUser(user);
   }
 
   async listAll(): Promise<UserEntity[]> {
+    logger.debug("Repository listing all users");
     const users = await this.prisma.user.findMany({
       orderBy: { createdAt: "desc" },
     });
 
+    logger.debug("Repository listed all users", { count: users.length });
     return users.map(mapUser);
   }
 
   async listByRole(role: UserRole): Promise<UserEntity[]> {
+    logger.debug("Repository listing users by role", { role });
     const users = await this.prisma.user.findMany({
       where: { role },
       orderBy: { createdAt: "desc" },
     });
 
+    logger.debug("Repository listed users by role", { role, count: users.length });
     return users.map(mapUser);
   }
 
   async upsertUser(payload: UpsertUserPayload): Promise<UserEntity> {
     const clerkKey = payload.clerkUserId.trim();
     if (!clerkKey) {
+      logger.warn("Repository upsertUser called without clerkUserId");
       throw new Error("clerkUserId is required");
     }
+
+    logger.info("Repository upserting user", {
+      clerkUserId: clerkKey,
+      email: payload.email,
+      role: payload.role,
+    });
 
     const existingByClerkId = await this.prisma.user.findUnique({
       where: { clerkUserId: clerkKey },
@@ -80,6 +108,14 @@ export class UserRepository {
         });
 
     const existing = existingByClerkId ?? existingByEmail;
+
+    if (existing) {
+      logger.debug("Repository found existing user during upsert", {
+        clerkUserId: clerkKey,
+        userId: existing.id,
+        matchedBy: existingByClerkId ? "clerkUserId" : "email",
+      });
+    }
 
     let role: UserRole = (payload.role ?? USER_ROLES.END_USER) as UserRole;
     let metadata = (payload.metadata ?? {}) as Prisma.InputJsonValue;
@@ -142,11 +178,18 @@ export class UserRepository {
           data: createData,
         });
 
+    logger.info("Repository upsert completed", {
+      clerkUserId: clerkKey,
+      userId: user.id,
+      action: existing ? "updated" : "created",
+    });
+
     return mapUser(user);
   }
   //end of this function (can change it back later)
 
   async updateMyProfile(clerkUserId: string, payload: UpdateMyProfilePayload): Promise<UserEntity | null> {
+    logger.info("Repository updating my profile", { clerkUserId });
     const user = await this.prisma.user.update({
       where: { clerkUserId },
       data: {
@@ -156,36 +199,59 @@ export class UserRepository {
       },
     }).catch(() => null);
 
-    if (!user) return null;
+    if (!user) {
+      logger.warn("Repository could not update profile because user was not found", { clerkUserId });
+      return null;
+    }
+
+    logger.info("Repository profile update completed", { clerkUserId, userId: user.id });
     return mapUser(user);
   }
 
   async updateUserRole(userId: string, payload: UpdateUserRolePayload): Promise<UserEntity | null> {
+    logger.info("Repository updating user role", { userId, role: payload.role });
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: { role: payload.role },
     }).catch(() => null);
 
-    if (!user) return null;
+    if (!user) {
+      logger.warn("Repository could not update role because user was not found", { userId });
+      return null;
+    }
+
+    logger.info("Repository user role update completed", { userId, role: user.role });
     return mapUser(user);
   }
 
   async updateUserStatus(userId: string, isActive: boolean): Promise<UserEntity | null> {
+    logger.info("Repository updating user status", { userId, isActive });
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: { isActive },
     }).catch(() => null);
 
-    if (!user) return null;
+    if (!user) {
+      logger.warn("Repository could not update status because user was not found", { userId });
+      return null;
+    }
+
+    logger.info("Repository user status update completed", { userId, isActive: user.isActive });
     return mapUser(user);
   }
 
   async deleteUser(userId: string): Promise<UserEntity | null> {
+    logger.info("Repository deleting user", { userId });
     const user = await this.prisma.user.delete({
       where: { id: userId },
     }).catch(() => null);
 
-    if (!user) return null;
+    if (!user) {
+      logger.warn("Repository could not delete user because user was not found", { userId });
+      return null;
+    }
+
+    logger.info("Repository user deletion completed", { userId });
     return mapUser(user);
   }
 }

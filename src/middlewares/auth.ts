@@ -18,7 +18,6 @@ const claimToRole = (claim: unknown): UserRole => {
 
 export const requireAuth: RequestHandler = (req, res, next) => {
   const auth = getAuth(req);
-  console.log(auth)
 
   logger.debug("Authenticating request", {
     path: req.path,
@@ -56,13 +55,19 @@ export const requireRole = (...roles: UserRole[]): RequestHandler => {
     const locals = res.locals as AuthLocals;
 
     if (!locals.role) {
+      logger.warn("Authorization denied: role not present in request context");
       return next(new AppError("Unauthorized", 401));
     }
 
     if (!roles.includes(locals.role)) {
+      logger.warn("Authorization denied: role not permitted", {
+        role: locals.role,
+        allowedRoles: roles,
+      });
       return next(new AppError("Forbidden", 403));
     }
 
+    logger.debug("Role authorization granted", { role: locals.role, allowedRoles: roles });
     next();
   };
 };

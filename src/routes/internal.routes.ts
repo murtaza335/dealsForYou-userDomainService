@@ -6,8 +6,11 @@ import {
   updateUserRole,
 } from "../controllers/internal.controller.js";
 import { verifyInternalToken, requireRole } from "../middlewares/internalAuth.js";
+import { logger } from "../utils/logger.js";
 
 export const internalRouter = Router();
+
+logger.debug("Registering internal routes");
 
 /**
  * POST /internal/resolve-user

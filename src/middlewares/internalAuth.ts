@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express";
 import { AppError } from "../error.js";
 import { TokenService } from "../services/token.service.js";
+import { logger } from "../utils/logger.js";
 
 export interface InternalAuthLocals {
   internalUserId?: string;
@@ -16,9 +17,18 @@ export interface InternalAuthLocals {
  */
 export const verifyInternalToken: RequestHandler = (req, res, next) => {
   try {
+    logger.debug("Verifying internal authorization token", {
+      path: req.path,
+      method: req.method,
+    });
+
     const authHeader = req.headers.authorization;
     
     if (!authHeader) {
+      logger.warn("Missing Authorization header on internal request", {
+        path: req.path,
+        method: req.method,
+      });
       return next(new AppError("Missing Authorization header", 401));
     }
 
@@ -32,8 +42,15 @@ export const verifyInternalToken: RequestHandler = (req, res, next) => {
     locals.tenantId = payload.tenant;
     locals.email = payload.email;
 
+    logger.debug("Internal token verified successfully", {
+      internalUserId: payload.sub,
+      role: payload.role,
+      tenantId: payload.tenant,
+    });
+
     next();
   } catch (error) {
+    logger.error("Internal token verification failed", error);
     next(error);
   }
 };
@@ -47,10 +64,15 @@ export const requireRole = (...allowedRoles: string[]): RequestHandler => {
     const locals = res.locals as InternalAuthLocals;
 
     if (!locals.role) {
+      logger.warn("Internal authorization denied: role missing");
       return next(new AppError("No role found in token", 403));
     }
 
     if (!allowedRoles.includes(locals.role)) {
+      logger.warn("Internal authorization denied: role not allowed", {
+        role: locals.role,
+        allowedRoles,
+      });
       return next(
         new AppError(
           `Missing required role: ${allowedRoles.join(", ")}`,
@@ -59,6 +81,7 @@ export const requireRole = (...allowedRoles: string[]): RequestHandler => {
       );
     }
 
+    logger.debug("Internal role authorization granted", { role: locals.role, allowedRoles });
     next();
   };
 };
