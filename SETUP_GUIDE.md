@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Node.js 18+ (already have it based on tsconfig)
-- PostgreSQL 12+ (local or Docker)
+- PostgreSQL 12+ or a Supabase project
 - npm 
 
 ## Step 1: Install Dependencies ✅
@@ -18,9 +18,22 @@ Status: **Already done** - all 153 packages installed.
 
 ## Step 2: Setup Database
 
-You still need PostgreSQL running, but Prisma will handle migrations.
+You can use either Supabase or a local PostgreSQL instance.
 
-### Option A: Local PostgreSQL (Recommended for Development)
+### Option A: Supabase (recommended for hosted environments)
+
+1. Create a Supabase project.
+2. Open Project Settings → Database.
+3. Copy the pooled connection string for runtime and the direct connection string for migrations.
+
+**Set environment variables:**
+
+```env
+DATABASE_URL=postgresql://postgres:<PASSWORD>@db.<PROJECT_REF>.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require
+DIRECT_URL=postgresql://postgres:<PASSWORD>@db.<PROJECT_REF>.supabase.co:5432/postgres?sslmode=require
+```
+
+### Option B: Local PostgreSQL (Recommended for Development)
 
 **Create database:**
 ```bash
@@ -31,7 +44,7 @@ If `createdb` is not available, create the database with any PostgreSQL client o
 
 ---
 
-### Option B: Docker PostgreSQL
+### Option C: Docker PostgreSQL
 
 **Start PostgreSQL container:**
 ```bash
@@ -66,7 +79,8 @@ nano .env
 ```env
 PORT=3000
 NODE_ENV=development
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/user_domain_db
+DATABASE_URL=postgresql://postgres:<PASSWORD>@db.<PROJECT_REF>.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require
+DIRECT_URL=postgresql://postgres:<PASSWORD>@db.<PROJECT_REF>.supabase.co:5432/postgres?sslmode=require
 JWT_SECRET=dev-secret-key-12345
 TOKEN_EXPIRY_MINUTES=15
 CLERK_SECRET_KEY=sk_test_your_key
@@ -78,10 +92,10 @@ SERVICE_NAME=user-domain-service
 
 ## Step 4: Run Database Migrations
 
-Run Prisma migrations against your `DATABASE_URL`:
+Run Prisma migrations against your `DIRECT_URL` when using Supabase:
 
 ```bash
-npx prisma migrate dev --name init
+npm run prisma:migrate
 ```
 
 If you only want to sync the schema without creating a migration file:
@@ -93,7 +107,7 @@ npx prisma db push
 Regenerate the Prisma client after schema changes:
 
 ```bash
-npx prisma generate
+npm run prisma:generate
 ```
 
 ---
@@ -168,14 +182,15 @@ Response (expected 401):
 # 1. Install dependencies
 npm install
 
-# 2. Create database (if using local PostgreSQL)
+# 2. Configure Supabase or create local database
+#    For local PostgreSQL:
 createdb user_domain_db
 
 # 3. Run migrations
-npx prisma migrate dev --name init
+npm run prisma:migrate
 
 # 4. Regenerate Prisma client if needed
-npx prisma generate
+npm run prisma:generate
 
 # 5. Copy and configure env file
 cp .env.local .env

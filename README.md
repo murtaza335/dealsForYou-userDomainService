@@ -75,8 +75,11 @@ Create a `.env` file with the following variables:
 PORT=3000
 NODE_ENV=development
 
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/user_domain_db
+# Supabase / PostgreSQL
+# DATABASE_URL should use the Supabase pooler endpoint.
+# DIRECT_URL should use the direct database endpoint for migrations.
+DATABASE_URL=postgresql://postgres:<PASSWORD>@db.<PROJECT_REF>.supabase.co:6543/postgres?pgbouncer=true&connection_limit=1&sslmode=require
+DIRECT_URL=postgresql://postgres:<PASSWORD>@db.<PROJECT_REF>.supabase.co:5432/postgres?sslmode=require
 
 # JWT/Token Configuration
 JWT_SECRET=your-super-secret-key-change-in-production
@@ -89,6 +92,16 @@ CLERK_JWKS_URL=https://your-instance.clerk.com/.well-known/jwks.json
 # Service Configuration
 SERVICE_NAME=user-domain-service
 ```
+
+### Supabase setup
+
+1. Create a Supabase project.
+2. Open Project Settings → Database.
+3. Copy the pooled connection string into `DATABASE_URL`.
+4. Copy the direct connection string into `DIRECT_URL`.
+5. Run Prisma migrations with `npm run prisma:migrate`.
+
+If you are using a local database instead, keep the same code and swap the URLs to your local PostgreSQL instance.
 
 ## API Endpoints
 
